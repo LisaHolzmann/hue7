@@ -23,9 +23,10 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 //
+package hue7.bsp2;
 
-package org.htmlparser.parserapplications;
-
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.JOptionPane;
 import org.htmlparser.Node;
 import org.htmlparser.NodeFilter;
@@ -37,62 +38,34 @@ import org.htmlparser.util.NodeList;
 import org.htmlparser.util.ParserException;
 
 /**
- * LinkExtractor extracts all the links from the given webpage
- * and prints them on standard output.
+ * LinkExtractor extracts all the links from the given webpage and prints them
+ * on standard output.
  */
-public class LinkExtractor
-{
+public class LinkExtractor {
+
     /**
      * Run the link extractor.
-     * @param args [0] Optional url to extract links from.
-     * An input dialog is displayed if it is not supplied.
+     *
+     * @param args [0] Optional url to extract links from. An input dialog is
+     * displayed if it is not supplied.
      */
-    public static void main (String[] args)
-    {
-        String url;
+    public static List<String> extract(String url) {
         Parser parser;
         NodeFilter filter;
-        NodeList list;
+        NodeList list = null;
+        List<String> links = new ArrayList<>();
 
-        if (0 >= args.length)
-        {
-            url = (String)JOptionPane.showInputDialog (
-                null,
-                "Enter the URL to extract links from:",
-                "Web Site",
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                null,
-                "http://htmlparser.sourceforge.net/wiki/");
-            if (null == url)
-                System.exit (1);
+        filter = new NodeClassFilter(LinkTag.class);
+
+        try {
+            parser = new Parser(url);
+            list = parser.extractAllNodesThatMatch(filter);
+            for (int i = 0; i < list.size(); i++) {
+                links.add(((LinkTag) list.elementAt(i)).getLink());
+            }
+        } catch (ParserException e) {
+            System.out.println("Fehler");
         }
-        else
-            url = args[0];
-        filter = new NodeClassFilter (LinkTag.class);
-        if ((1 < args.length) && args[1].equalsIgnoreCase ("-maillinks"))
-            filter = new AndFilter (
-                filter,
-                new NodeFilter ()
-                {
-                    public boolean accept (Node node)
-                    {
-                        return (((LinkTag)node).isMailLink ());
-                    }
-                }
-            );
-        try
-        {
-            parser = new Parser (url);
-            list = parser.extractAllNodesThatMatch (filter);
-            for (int i = 0; i < list.size (); i++)
-                System.out.println (list.elementAt (i).toHtml ());
-        }
-        catch (ParserException e)
-        {
-            e.printStackTrace ();
-        }
-        System.exit (0);
+        return links;
     }
 }
-

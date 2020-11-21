@@ -3,9 +3,20 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package hue7;
+package hue7.bsp1;
 
+import com.sun.jmx.remote.util.EnvHelp;
+import java.awt.BorderLayout;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
+import static java.util.concurrent.ForkJoinTask.invokeAll;
 import java.util.concurrent.RecursiveAction;
+import static java.util.stream.Collectors.toList;
+import java.util.stream.IntStream;
 
 /**
  *
@@ -29,6 +40,10 @@ public final class ReciprocalArraySum {
         double sum = 0;
 
         // ToDo: Compute sum of reciprocals of array elements
+        for (int i = 0; i < input.length; i++) {
+            sum = sum + (1d / i);
+        }
+        return sum;
     }
 
     /**
@@ -86,6 +101,28 @@ public final class ReciprocalArraySum {
             // array smaller than threshold: compute sequentially else, fork
             // 2 new threads
 
+            if (input.length <= SEQUENTIAL_THRESHOLD) { // base case
+                double sum = seqArraySum(input);
+                System.out.println("Summe:" + seqArraySum(input));
+            } else { // recursive case
+                // Calculate new range
+                int mid = input.length / 2;
+
+                double[] firstHalf = Arrays.copyOfRange(input, startIndexInclusive, mid);
+                double[] secondHalf = Arrays.copyOfRange(input, mid, endIndexExclusive);
+
+                ReciprocalArraySumTask firstSubtask
+                        = new ReciprocalArraySumTask(startIndexInclusive, endIndexExclusive, firstHalf);
+                ReciprocalArraySumTask secondSubtask
+                        = new ReciprocalArraySumTask(startIndexInclusive, endIndexExclusive, secondHalf);
+
+                //firstSubtask.fork(); // queue the first task
+                //secondSubtask.compute(); // compute the second task
+                //firstSubtask.join(); // wait for the first task result
+                invokeAll(firstSubtask, secondSubtask);
+
+            }
+
         }
     }
 
@@ -97,11 +134,39 @@ public final class ReciprocalArraySum {
      * @param numTasks The number of tasks to create
      * @return The sum of the reciprocals of the array input
      */
+    static double result;
+
     protected static double parManyTaskArraySum(final double[] input,
             final int numTasks) {
-        double sum = 0;
-        // ToDo: Start Calculation with help of ForkJoinPool
 
-        return sum;
+        ForkJoinPool forkJoinPool = new ForkJoinPool(numTasks);
+        if (input.length <= ReciprocalArraySumTask.SEQUENTIAL_THRESHOLD) { // base case
+            double sum = seqArraySum(input);
+            //System.out.format("Sum of %s: %d\n", data.toString(), sum);
+            return sum;
+        } else { // recursive case
+            // Calculate new range
+            ReciprocalArraySumTask reciTask = new ReciprocalArraySumTask(1, 4, input);
+            forkJoinPool.execute(reciTask);
+            forkJoinPool.invoke(reciTask);
+
+            ForkJoinTask<Void> result = forkJoinPool.submit(reciTask);
+
+        }
+        return result;
+    }
+
+    public static void main(String[] args) {
+        double[] input = new double[60000];
+        for (int i = 0; i < input.length; i++) {
+            input[i] = (Math.random() * 100);
+
+        }
+
+        ForkJoinPool pool = new ForkJoinPool();
+        // System.out.println("Pool parallelism: " + pool.getParallelism());
+        ReciprocalArraySumTask task = new ReciprocalArraySumTask(0, input.length - 1, input);
+        //  task.compute();
+        pool.invoke(task);
     }
 }
